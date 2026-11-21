@@ -28,6 +28,9 @@ export function createApiHandler() {
       const server = buildMcpServer(env, ctx, auth, clientProps, extractToken(request));
       const isToolsList = await isMcpToolsListRequest(request);
       const response = await createMcpHandler(server)(request, env, ctx);
+      // Only POST JSON-RPC responses are finite; GET opens a long-lived SSE stream
+      // that would hang forever if buffered by rewriteDailyLimitToolErrors.
+      if (request.method !== "POST") return response;
       // R3 continued: a D1 cap hit INSIDE a tool call never reaches the block above — the SDK's
       // own dispatch already caught it and turned it into a normal-looking CallToolResult whose
       // text is the raw D1 error ("D1_ERROR: ... daily row read/write limit ..."), see

@@ -98,4 +98,21 @@ describe("MCP HTTP handler with the real agents/mcp handler (FX3 finding 1)", ()
     expect(payload.error).toBeUndefined();
     expect(payload.result?.content).toBeDefined();
   });
+
+  it("GET /mcp: resolves immediately without buffering an open SSE stream", async () => {
+    const req = new Request("http://localhost/mcp", {
+      method: "GET",
+      headers: {
+        Accept: "text/event-stream",
+        Authorization: "Bearer test-token",
+        Host: "localhost",
+      },
+    });
+    const res = await Promise.race([
+      handler.fetch(req, env, ctx),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error("GET /mcp hung")), 2000)),
+    ]);
+    expect([200, 405]).toContain(res.status);
+    await res.body?.cancel();
+  });
 });
